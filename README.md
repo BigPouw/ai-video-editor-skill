@@ -1,8 +1,28 @@
 # AI Video Editor Skill
 
-讓 Codex、Claude Code、Gemini CLI、Google Antigravity 使用同一套技能，透過自然語言剪輯本機影片。
+讓 Codex、Claude Code、Google Antigravity 等具備本機檔案與終端機操作能力的 AI 工具，透過自然語言剪輯影片。**Google AI Pro 使用者建議優先使用 Antigravity**。
 
-> 狀態：v0.1 開發預覽版。**請先在本機測試，尚未完成四種 AI 工具的實機驗證。**
+> 狀態：v0.1 公開測試版。已完成 Windows + Codex 本機 MVP 驗證；其他 AI 工具／系統目前屬技術相容性分析，**未宣稱實機驗證通過**。
+
+## 零基礎：下載後，先把專案交給 AI
+
+1. 用 GitHub 的 **Code → Download ZIP** 下載並解壓縮（或使用 `git clone https://github.com/BigPouw/ai-video-editor-skill.git`）。
+2. 用 [Google Antigravity](https://antigravity.google/)（推薦 Google AI Pro 使用者）、Codex 或 Claude Code 開啟解壓後的專案資料夾。
+3. 在專案內建立 `input/`，放入要剪的 MP4／MOV、MP3／WAV；不要把私人素材提交到 GitHub。
+4. **第一次先貼這段環境準備提示詞**：
+
+```text
+請先閱讀本專案的 README.md、docs/USER_GUIDE.md 與 skills/video-editor/SKILL.md。
+我要使用 video-editor 剪輯本機影片；請幫我確認 Python 3.10+、ffmpeg、ffprobe 是否可用，
+也檢查目前 AI 工具能否讀取本專案、執行終端機與使用這份 Skill。
+若缺少必要環境，請先告訴我需要安裝什麼、是否需要管理員權限；經我同意後再協助安裝。
+若 Skill 無法直接安裝，先依 SKILL.md 使用本專案附帶的腳本即可。
+完成後請確認 input/ 與 output/ 資料夾；不要刪除或覆蓋我的素材、
+不要呼叫付費 API、不要把影片上傳到 GitHub，也不要發布影片。
+準備好後告訴我可以開始下剪輯指令。
+```
+
+AI **通常能協助檢查、安裝與排錯**，但安裝系統軟體可能需要使用者核准、管理員權限或手動完成；純聊天網頁、沒有終端機權限的 AI 無法執行本機剪輯。
 
 ## 複製這段話，讓 AI 幫你剪
 
@@ -28,15 +48,15 @@ AI 會建立剪輯計畫並執行，你只需要提供素材和剪輯指令。�
 - 加上片頭文字與既有 SRT 字幕，設定字型名稱、大小、顏色、描邊。
 - **選用** ElevenLabs Scribe 自動生成 SRT；需要自己的 API Key，會將媒體上傳到第三方並可能產生費用，預設絕不呼叫。
 
-這是「指令型剪輯」，不是能自動理解精彩橋段的影片分析模型。
+這是「指令型剪輯」，不是能自動理解精彩橋段的影片分析模型。**不是所有剪輯技巧都能做**：完整的功能、可調參數與尚未支援的效果，見 [剪輯能力清單](docs/USER_GUIDE.md#完整剪輯能力清單)。
 
-## 1. 安裝必要工具
+## 1. 必要環境（也可以請 AI 協助安裝）
 
 需在**執行 AI 的電腦或容器**上備妥：
 
 - Python 3.10 以上（不需要額外 pip 套件）。
 - [FFmpeg](https://ffmpeg.org/download.html)，包含 `ffmpeg` 和 `ffprobe`。
-- Codex、Claude Code、Gemini CLI 或 Antigravity 任一可操作本機檔案/命令的工具。
+- Codex、Claude Code、Antigravity 等任一可操作本機檔案／終端機的 AI 工具。
 
 在終端機確認：
 
@@ -50,7 +70,7 @@ Windows 若 `python` 不可用，可試 `py -3`；macOS/Linux 通常是 `python3
 
 ## 2. 安裝 Skill
 
-若已安裝支援 `gh skill` 的 [GitHub CLI](https://cli.github.com/)，擇一執行：
+如果已安裝支援 `gh skill` 的 [GitHub CLI](https://cli.github.com/)，可擇一執行；**新手不必先手動學會這些指令，交給 AI 協助即可**：
 
 ```shell
 # Codex
@@ -59,18 +79,15 @@ gh skill install BigPouw/ai-video-editor-skill video-editor --agent codex --scop
 # Claude Code
 gh skill install BigPouw/ai-video-editor-skill video-editor --agent claude-code --scope user
 
-# Gemini CLI
-gh skill install BigPouw/ai-video-editor-skill video-editor --agent gemini-cli --scope user
-
-# Google Antigravity
+# Google Antigravity（Google AI Pro 推薦）
 gh skill install BigPouw/ai-video-editor-skill video-editor --agent antigravity --scope user
 ```
 
-目前倉庫是 Private，只有有權限的 GitHub 使用者可以安裝；公開後同學才能直接使用。這些命令需要新版 GitHub CLI 的 `gh skill` 功能。也可以把 [Skill 資料夾](skills/video-editor/) 手動複製到對應工具的 Skills 目錄。
+如果倉庫尚未公開，需先取得 GitHub 存取權限；公開後才可匿名下載。這些指令需要具有 `gh skill` 功能的 GitHub CLI。若命令不可用，AI 仍可**直接閱讀** [SKILL.md](skills/video-editor/SKILL.md) 並執行倉庫內的腳本；Antigravity 亦支援將技能資料夾放到 `.agents/skills/video-editor/`。不同工具的技能重新載入機制可能不同，尚未逐一實測。
 
 ## 3. 準備素材
 
-建立自己的工作資料夾；**影片不用上傳到 GitHub**：
+可直接在下載的 Repo 裡建立 `input/`，也能另建獨立工作資料夾；**影片不用上傳到 GitHub**：
 
 ```text
 我的影片專案/
@@ -88,7 +105,7 @@ gh skill install BigPouw/ai-video-editor-skill video-editor --agent antigravity 
 
 AI 會產生 `edit-plan.json` 並執行剪輯，成品在 `output/`。要求「字幕大一點」或「音樂再小聲」就能修改下一版；舊成品不會覆蓋。
 
-詳細圖片/字型/字幕、操作和排錯方式見 [使用者教學](docs/USER_GUIDE.md)。
+詳細字型、字幕、操作和排錯方式見 [使用者教學](docs/USER_GUIDE.md)。
 
 ## 4. 手動執行（不用 AI）
 
@@ -103,7 +120,7 @@ python skills/video-editor/scripts/render.py /path/to/你的影片專案/edit-pl
 
 ## ElevenLabs 自動字幕（自願、付費）
 
-有 `captions.srt` 就完全不需要 API。若希望 AI 從已剪好的影片產生字幕，需先明確同意把影片傳送到 ElevenLabs 並承擔相關用量，再設定 `ELEVENLABS_API_KEY`，由 AI 執行選用腳本。詳見 [使用者教學](docs/USER_GUIDE.md#選用-elevenlabs-自動字幕)。
+有 `captions.srt` 就完全不需要 API。已保留 **ElevenLabs 選用介面／腳本**，但**沒有使用付費帳號實際呼叫驗證**。若希望 AI 從影片產生字幕，必須另行明確同意上傳媒體和可能的費用，並設定自己的 `ELEVENLABS_API_KEY`。詳見 [使用者教學](docs/USER_GUIDE.md#選用-elevenlabs-自動字幕)。
 
 **不要把 API Key 放進對話、GitHub 或範例檔案。**
 
@@ -113,7 +130,8 @@ python skills/video-editor/scripts/render.py /path/to/你的影片專案/edit-pl
 - 腳本只讀取指定專案資料夾內的檔案，輸出只寫入 `output/`，同名成品自動使用 `_v2` 等新檔名。
 - 使用者必須有影音素材授權；公開作品前請檢查字幕、音樂和最終畫面。
 - 本工具不保證自動挑精彩片段、卡點、物件追蹤或複雜動態排版。
-- 完整的 Windows／macOS／Linux，以及各種 AI 工具實機相容性，仍需逐步驗證。
+- Windows／macOS／Linux 與各種 AI 工具的實機相容性尚未逐一驗證；可行性分析見 [工具相容性](docs/USER_GUIDE.md#不同-ai-工具可行性)。
+- 本機 FFmpeg 剪輯不等於 AI 服務完全離線；若 AI 主動讀取、分析媒體，仍須留意該 AI 工具的檔案傳送與隱私規範。
 
 ## 開發測試
 
