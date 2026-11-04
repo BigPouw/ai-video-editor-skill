@@ -1,4 +1,5 @@
-# User media, output and paid credentials
+# User media, output, locally prepared tools and paid credentials
+.tools/
 input/
 output/
 *.mp4

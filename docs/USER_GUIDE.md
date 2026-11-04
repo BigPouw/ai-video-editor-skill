@@ -20,8 +20,10 @@
 請先閱讀 README.md、docs/USER_GUIDE.md 和 skills/video-editor/SKILL.md。
 我要用這個專案剪輯影片，請檢查 Python 3.10+、ffmpeg、ffprobe、
 本機檔案與終端機執行權限，以及 video-editor Skill 是否可用。
-缺少的工具請先告訴我需要安裝什麼，徵得我的同意後再協助安裝，
-並驗證安裝成功；如果無法代裝，請一步一步指引我操作。
+若缺少 ffmpeg／ffprobe，先搜尋現有版本；仍缺少時，優先從可信來源
+準備工作資料夾內的可攜版，只對剪輯命令設定 PATH，驗證後繼續。
+若缺少 Python、需管理員權限／系統變更或平台要求授權，才請我確認；
+不要繞過權限限制。
 若 Skill 尚未註冊，直接依專案內 SKILL.md 執行腳本即可。
 請建立 input/ 和 output/，不要刪除我的素材、上傳影片或使用付費 API。
 ```
@@ -38,7 +40,7 @@ ffmpeg -version
 ffprobe -version
 ```
 
-Windows 若 `python` 找不到，可試 `py -3`；macOS/Linux 可試 `python3`。**Windows 常見問題**：FFmpeg 已下載但未加入 PATH；AI 可以協助排查，安裝或修改系統環境變數仍可能需要你的同意或管理員權限。
+Windows 若 `python` 找不到，可試 `py -3`；macOS/Linux 可試 `python3`。**Windows 常見問題**：FFmpeg 已下載但未加入 PATH；AI 可先尋找現有執行檔，並只對執行剪輯的命令設定 PATH。若需要修改系統設定或取得管理員權限，仍須使用者確認。
 
 只有具備終端機執行、檔案讀寫權限的 AI 才能實際渲染；單純開啟網頁版聊天服務不能保證操作本機程式。
 
