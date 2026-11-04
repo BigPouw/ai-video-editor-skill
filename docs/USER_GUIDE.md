@@ -1,6 +1,6 @@
 # AI Video Editor｜完整使用教學
 
-這份教學寫給第一次使用 Codex、Claude Code、Gemini CLI 或 Google Antigravity 剪輯影片的同學。不需要學 FFmpeg 指令。
+這份教學寫給第一次使用 Google Antigravity、Codex 或 Claude Code 剪輯影片的同學。**有 Google AI Pro 的同學，優先推薦 Antigravity。**不用先學 FFmpeg 指令，也不用先會寫程式。
 
 ## 先理解三個角色
 
@@ -8,20 +8,43 @@
 2. **video-editor Skill**：提供統一操作方式，指引 AI 安全使用工具。
 3. **FFmpeg + Python**：真正執行影片與音訊處理；不依賴某家 AI 模型的 API。
 
-一般剪輯在本機完成。只有你明確要求並授權 ElevenLabs 自動字幕時，才會把指定媒體送往 ElevenLabs。
+真正的渲染工作由本機 FFmpeg 執行，不需要另外購買 AI 剪輯 API。**但 AI 工具若讀取影片畫面或內容，資料如何被服務處理仍以該 AI 工具的隱私規範為準。**只有你明確要求並授權 ElevenLabs 自動字幕時，附帶的轉錄腳本才會主動把指定媒體傳送到 ElevenLabs。
 
-## 步驟一：準備環境
+## 步驟一：下載並讓 AI 準備環境
 
-- 先安裝 [Python](https://www.python.org/downloads/)（3.10+）與 [FFmpeg](https://ffmpeg.org/download.html)。
-- 確認終端機找得到 `python`（或 Windows `py -3`、macOS/Linux `python3`）、`ffmpeg`、`ffprobe`。
-- 確認所選 AI 工具具備本機工作資料夾的讀寫權限，且允許執行命令。純網頁聊天頁面不等同於可執行本 Skill 的編碼工具。
-- 透過 README 的 `gh skill install` 指令，依 Codex、Claude Code、Gemini CLI 或 Antigravity 擇一安裝。若看不到新技能，使用該工具的技能重新整理功能或重新開啟工作階段。
+1. 從 [GitHub 專案](https://github.com/BigPouw/ai-video-editor-skill) 按 **Code → Download ZIP**，解壓縮並用 AI 編碼工具開啟整個專案資料夾；不懂 Git 沒關係。
+2. 推薦有 Google AI Pro 的同學使用 [Google Antigravity](https://antigravity.google/)；已有 Codex 或 Claude Code 的同學也可使用。
+3. 先貼以下提示詞，**讓 AI 幫你檢查環境**：
 
-**常見 Windows 問題**：執行 `ffmpeg -version` 若顯示找不到命令，代表 FFmpeg 尚未安裝或未加入 PATH。先處理這件事再開始剪輯。
+```text
+請先閱讀 README.md、docs/USER_GUIDE.md 和 skills/video-editor/SKILL.md。
+我要用這個專案剪輯影片，請檢查 Python 3.10+、ffmpeg、ffprobe、
+本機檔案與終端機執行權限，以及 video-editor Skill 是否可用。
+缺少的工具請先告訴我需要安裝什麼，徵得我的同意後再協助安裝，
+並驗證安裝成功；如果無法代裝，請一步一步指引我操作。
+若 Skill 尚未註冊，直接依專案內 SKILL.md 執行腳本即可。
+請建立 input/ 和 output/，不要刪除我的素材、上傳影片或使用付費 API。
+```
+
+4. AI 若確認 Python 和 FFmpeg 已可用，就能開始剪；若要讓其他影片專案也能呼叫這個 Skill，可再讓 AI 按 README 安裝成使用者級 Skill。
+
+### 自己確認（選用）
+
+需要 Python 3.10+、`ffmpeg` 和 `ffprobe`；原始腳本不需額外 pip 套件。工具可從 [Python](https://www.python.org/downloads/) 和 [FFmpeg](https://ffmpeg.org/download.html) 下載。在終端機執行：
+
+```shell
+python --version
+ffmpeg -version
+ffprobe -version
+```
+
+Windows 若 `python` 找不到，可試 `py -3`；macOS/Linux 可試 `python3`。**Windows 常見問題**：FFmpeg 已下載但未加入 PATH；AI 可以協助排查，安裝或修改系統環境變數仍可能需要你的同意或管理員權限。
+
+只有具備終端機執行、檔案讀寫權限的 AI 才能實際渲染；單純開啟網頁版聊天服務不能保證操作本機程式。
 
 ## 步驟二：放入素材
 
-在電腦上建立一個資料夾，例如：
+最簡單的方法是在下載並解壓的專案根目錄建立 `input/`（專案附帶的 `.gitignore` 會排除媒體）；也可以使用另外的個人工作資料夾。例如：
 
 ```text
 旅行影片/
@@ -35,13 +58,13 @@
 └── output/                  # AI 自動建立
 ```
 
-影片名稱不必固定；MP4、MOV 等 FFmpeg 能讀取的影片均可嘗試。音訊可用 MP3、WAV 等格式。**請不要把私人影片放進 GitHub 倉庫**。
+影片名稱不必固定；MP4、MOV 等 FFmpeg 能讀取的影片均可嘗試。音訊可用 MP3、WAV 等格式。**可以放在本機下載的專案 `input/`，但不要把私人影片提交或推送到 GitHub。**
 
 如果有多個音檔，最好在名稱中標示 `music`／`voice`，減少 AI 混淆。第一次先用 1–2 段短片測試。
 
 ## 步驟三：讓 AI 剪片
 
-在 AI 編碼工具中開啟「旅行影片」工作資料夾。複製下方範本，把括號中的內容換成自己的素材和設定。
+在 AI 編碼工具中開啟含有 `input/` 的工作資料夾（若安裝了 Skill，可使用獨立資料夾）。複製下方範本，把括號中的內容換成自己的素材和設定。
 
 ### 填空版
 
@@ -90,15 +113,15 @@ AI 會核對素材對應、長度與音軌，接著建立 `edit-plan.json` 並�
 
 將字幕放在 `input/subtitles.srt`。它的時間碼應對齊**成品時間軸**，不是剪輯前原影片的絕對時間。可以用中文向 AI 指定：
 
-> 使用 subtitles.srt，字幕白色、黑色描邊，字體 Noto Sans CJK TC，字體大小 54，位置在底部。
+> 使用 subtitles.srt，字幕白色、黑色描邊，字體 Noto Sans CJK TC，字體大小 54。
 
-底層以 ASS 字幕渲染，預設字體為 Arial。中文字型通常可用系統已安裝的思源黑體、微軟正黑體等；不同作業系統的字型名稱可能不同。可以另附 TTF/OTF 並指定字型家族名稱，但必須讓字型檔內的實際家族名稱與設定一致。請以成片確認是否正確套用，避免缺字。
+底層以 ASS 字幕渲染，預設字體為 Arial，字幕位置固定靠下。中文字型通常可用系統已安裝的思源黑體、微軟正黑體等；不同作業系統的字型名稱可能不同。可另附 TTF/OTF 並指定字型家族名稱，但必須讓實際家族名稱與設定一致。請確認成片避免缺字。
 
-`title` 是片頭文字，不等同逐句字幕。可設定開始時間、結束時間與字體大小。
+`title` 是一則固定在畫面上方的標題（不限只能在開頭），可指定文字、出現起訖秒數、字體和大小；**不是任意位置、多行動態標題設計器**。
 
 ### 選用 ElevenLabs 自動字幕
 
-若沒有 SRT、但影片有對話，ElevenLabs Scribe v2 可協助語音辨識並取得時間碼。這是**可選的第三方付費 API**，且需要把指定媒體上傳給 ElevenLabs。使用者未明確同意時，AI 不能呼叫。
+若沒有 SRT、但影片有對話，已預留並實作 ElevenLabs Scribe v2 的**選用 API 呼叫腳本**，可將轉錄結果轉為 SRT；**目前只通過離線資料測試，沒有以真實 API Key 付費實測**。它需要上傳指定媒體並可能產生費用，使用者未明確同意時絕不能呼叫。
 
 流程：
 
@@ -117,23 +140,65 @@ python skills/video-editor/scripts/transcribe_elevenlabs.py "旅行影片/output
 
 請勿把 API Key 寫入 `edit-plan.json`、`.env` 並提交到公開倉庫，或直接貼進公開討論區。
 
-## 支援的剪輯設定
+## 完整剪輯能力清單
 
-| 使用者常說的要求 | 剪輯計畫欄位 |
+以下依目前 `skills/video-editor/scripts/render.py` 的實際可用功能整理。**表中寫「支援」才是這版工具內建保證的能力**；AI 理論上可以另外寫 FFmpeg 指令，不等於此 Skill 已經內建或測試那項效果。
+
+| 類別 | 目前支援的剪輯技巧 | 明確範圍／提醒 |
+| --- | --- | --- |
+| 片段 | 選片、排列、裁切、合併、取指定秒數 | 每份計畫 **1–12 段**，每段可指定起點及終點；不指定則使用整段 |
+| 播放速度 | 快轉、慢動作 | 每段可指定 **0.5–2.0 倍**，聲音跟隨速度調整 |
+| 轉場 | 硬切、畫面交叉淡化、向左擦除、向右擦除 | `cut`／`fade`／`wipeleft`／`wiperight`；非硬切轉場 **0–3 秒**；**全片段交界統一同一種轉場與時長** |
+| 開頭結尾 | 畫面與整體音訊淡入、淡出 | `fade.in / fade.out`，各 **0–5 秒**；是整支影片的頭尾，不是每段獨立淡化 |
+| 畫面比例 | 直式 Shorts、橫式、正方形 | `shorts` 720×1280、`landscape` 1280×720、`square` 720×720 |
+| 畫面解析度 | 自訂輸出長寬 | `resolution: [1080,1920]` 等；每邊 **256–3840 像素且須為偶數**；高解析度更耗時 |
+| 畫面填滿方式 | 中央裁切、加黑邊保留完整畫面 | `fit: crop / pad`；**目前沒有可指定裁切焦點或自動追蹤人物** |
+| 影格率 | 指定輸出 FPS | **24／25／30／50／60** |
+| 原聲 | 保留、降低、放大或靜音 | 全片共用 `original_audio_volume`，**0–2 倍**；未內建逐段不同原聲音量 |
+| 各段配樂 | A 段配 X、B 段配 Y、其他段可只留原聲 | 每段 `music.file`、`music.volume`（**0–2**）、`music.start`（音樂起點秒數）；音樂不足會循環 |
+| 音訊轉場 | 畫面轉場時，兩段配樂／音訊同步交叉淡化 | 非硬切轉場與影片使用相同時間；已完成雙段音訊本機驗收 |
+| 全片配樂 | 一首 BGM 貫穿全片，可循環、調音量 | 頂層 `music`；**只要有任一段設定獨立配樂，就改以逐段配樂為準** |
+| 固定標題 | 一則標題文字、字型、字號、出現時間 | `title.text / font / size / start / end`；**固定上方，沒有文字動畫或任意定位** |
+| 字幕 | 匯入 SRT，燒入成品 | 可選字型家族、字體檔、字號 **14–150**、文字色碼、描邊 **0–10**；**字幕固定靠下**，時間碼依成品 |
+| 匯出 | MP4 編碼、輸出資料夾、防止覆蓋 | H.264 影片 + AAC 音訊，保留來源；同名輸出改為 `_v2` 等 |
+| 自動字幕 API（選用） | 使用 ElevenLabs 將語音辨識結果轉成 SRT | **有介面但尚未真實付費實測**；需要自行提供 Key、授權上傳與費用；一般剪輯不呼叫 |
+
+### 可以直接對 AI 說的剪輯指令
+
+- **剪接**：「01.mp4 只要第 5–12 秒，接 02.mp4 的前 8 秒，第二段快轉到 1.5 倍。」
+- **視覺**：「做成 9:16、1080×1920，整段畫面用留黑邊方式保留完整內容。」
+- **轉場**：「每段交界都用向左擦除，0.4 秒；開場淡入 0.3 秒，結尾淡出 0.8 秒。」
+- **聲音**：「A 搭配 X.mp3 音量 15%，從音樂第 2 秒開始；B 搭配 Y.mp3 音量 25%，A／B 間交叉淡化 0.5 秒。原聲減至 40%。」
+- **文字**：「開頭 0–3 秒顯示標題『台北一日遊』；加入 input/captions.srt，白字黑邊，字號 56。」
+- **調整**：「第二版把配樂再降到 10%，保留之前版本。」
+- **不配樂**：「第二段完全不要配樂，只保留該段原聲。」（如果全片有逐段配樂，未指定配樂的片段即為只留原聲。）
+
+### 目前不能保證做到的剪輯技巧
+
+| 尚未內建／未驗證 | 原因或替代方式 |
 | --- | --- |
-| 影片第 2 到 8 秒 | `clips[].start / end` |
-| 第二段加速 1.5 倍 | `clips[].speed` |
-| 直式/橫式/正方形 | `format: shorts / landscape / square` |
-| 用黑邊保留完整畫面 | `fit: pad`（預設 `crop`） |
-| 影片之間淡化 0.5 秒 | `transition: {type: fade, duration: 0.5}` |
-| 淡入/淡出 | `fade.in / fade.out` |
-| 原聲音量 100% | `original_audio_volume: 1.0` |
-| 全片音樂音量 20% | 頂層 `music.volume: 0.2` |
-| 第一段配 X.mp3，音量 20%，從音樂第 3 秒開始 | 第一段的 `music: {file: "input/X.mp3", volume: 0.2, start: 3}` |
-| 顯示標題 | `title.text / start / end` |
-| 字幕字型與字號 | `subtitles.font / size / outline / color` |
+| 自動找高潮、精彩鏡頭、依劇情剪片 | AI 必須另外分析畫面內容；本工具只根據你指定的檔名與秒數操作 |
+| 音樂節拍自動卡點、智慧混音、降噪、分離人聲 | 沒有節拍偵測、音訊辨識或降噪演算法 |
+| 模糊人臉／馬賽克、去背、人物追蹤、動態裁切焦點 | 沒有物件偵測與追蹤流程 |
+| 動態貼圖、複雜文字動畫、多文字層、逐字特效 | 目前只有一則固定標題與 SRT 字幕 |
+| 每一處使用不同轉場／每一段不同原聲音量 | 目前方案只有全域轉場設定與全域原聲音量 |
+| 色彩校正、濾鏡、反轉、穩定防手震、進階特效 | 尚未設計成可指令化的受測剪輯計畫 |
+| 自動上傳 YouTube／IG、連動雲端剪輯服務 | 沒有串接社群帳戶或發布 API |
+| 免安裝純瀏覽器一鍵剪輯 | 需要具備本機執行能力的 AI、Python 和 FFmpeg |
 
-輸出預設為 H.264/AAC MP4，Shorts 為 720×1280／30fps，橫式為 1280×720／30fps。可在計畫中使用 `resolution: [1080,1920]` 改為 1080p 直式，但轉檔會更久。
+**注意：** FFmpeg 本身可以完成更多效果，AI 也有可能自行寫腳本完成其他剪輯。那屬於「額外開發／臨時擴充」，不能當成此版本已支援、已測試的功能。
+
+## 不同 AI 工具可行性
+
+| 工具 | 技術判斷 | 實際測試狀態 |
+| --- | --- | --- |
+| **Codex（Windows）** | 已可讀取 Skill 並呼叫 Python／FFmpeg；Issue #1 的音樂交叉淡化已驗收 | **已實測 PASS** |
+| **Google Antigravity（Google AI Pro 推薦）** | Google 官方提供 Agent Skills、終端機與本機檔案工作流程，格式與腳本相容性高；若 Skill 自動安裝不便，可直接讀專案 `SKILL.md` 來執行腳本 | **技術分析可行，尚未實測** |
+| **Claude Code** | 具備 Skills／終端機操作能力；核心程式不依賴 Codex 專用 API | **技術分析可行，尚未實測** |
+| **舊版 Gemini CLI + 一般 Google 帳號／Google AI Pro** | 官方已終止該消費者方案的 Google 登入路徑，**不適合當作本教學推薦方案** | **不測；建議改 Antigravity** |
+| **純網頁聊天 AI（無本機終端機）** | 無法直接執行此專案的 Python／FFmpeg 腳本 | **不支援直接本機渲染** |
+
+**最有價值的一次額外驗證**：如果你已經有 Google AI Pro，只需用 Antigravity 打開下載的 Repo、貼上「步驟一」提示詞、讓它使用兩段短影片和兩首 MP3 產出 MP4；確認畫面、聲音及轉場就夠了。不需要為此付費訂閱或實測其他工具，也不需呼叫選用字幕 API。
 
 ## 使用者常見問題
 
@@ -141,9 +206,19 @@ python skills/video-editor/scripts/transcribe_elevenlabs.py "旅行影片/output
 
 不會。一般剪輯在目前電腦/執行環境完成；GitHub 只放技能、腳本與公開文件。ElevenLabs 功能例外，必須明確授權，才會向第三方傳送檔案。
 
-**Q：Claude Code / Gemini CLI 是否也能用？**
+**Q：我只有 Google AI Pro，應該選哪一個？**
 
-技能格式共用，前提是安裝成功、能執行本機 Python 和 FFmpeg，且對素材資料夾有權限。不同工具的沙箱與授權介面可能不同，需分別測試。
+建議使用 **Google Antigravity**。Google 官方列出 AI Pro 的 Antigravity 使用額度與 Agent Skills 支援；但此專案仍需要使用者在自己的電腦完成一次實機驗證。一般剪片不需要另外呼叫 Gemini API，也不會消耗 ElevenLabs 額度。
+
+**Q：Claude Code / Antigravity 是否也能使用同一份 Skill？**
+
+技術上可行：兩者具有 Agent Skills／本機命令執行能力，且核心剪輯只是標準 Python + FFmpeg。**目前只完成 Windows + Codex 的實測**，其他工具的 skill 安裝位置、權限、PATH 與 OS 相容性，仍未實機驗證；不宣稱全數 PASS。
+
+**Q：舊版 Gemini CLI 可以直接用 Google AI Pro 登入嗎？**
+
+**不建議。** Google 官方公告，自 **2026-06-18** 起，Gemini Code Assist 個人方案（包括 Google AI Pro／Ultra）及舊版 Gemini CLI 的 Google 帳號登入服務已停止。請改用 Antigravity App／CLI。不同企業帳號或其他認證路徑不在本專案相容性承諾範圍內。
+
+參考官方文件：[Antigravity Agent Skills](https://antigravity.google/docs/skills/)、[Antigravity 方案](https://antigravity.google/docs/plans)、[Google 個人版 Gemini CLI 停用公告](https://developers.google.com/gemini-code-assist/docs/deprecations/code-assist-individuals)。
 
 **Q：字幕顯示方框或字型不對？**
 
