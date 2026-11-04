@@ -11,7 +11,7 @@ Use the bundled deterministic scripts for video-editing requests. This is a port
 
 1. Locate the user's working folder and media. Prefer `input/`, but accept explicitly named local files. Treat filenames as hints, not evidence of the video's content. Inspect video/audio streams and durations using `ffprobe`.
 2. Check `python`/ `python3`, `ffmpeg` and `ffprobe` are available. Do not install system software without user consent.
-3. Infer the minimum useful edit from the user's instructions. Ask one focused question only if important choices are ambiguous (e.g. multiple unknown audio roles). Do not claim to automatically identify exciting scenes.
+3. Summarize the intended clip order and clip-to-music assignments before rendering. When a user pairs A with X and B with Y, use each clip's `music` field. Infer the minimum useful edit and ask a focused question only when a file is missing or an important choice is unclear. Translate the user's natural-language request into the plan yourself.
 4. Keep all input files unchanged. Put the plan at the project root as `edit-plan.json`; put MP4 and optional caption output inside `output/`.
 
 ## Execute edits
@@ -32,15 +32,14 @@ All file paths are relative to the directory containing `edit-plan.json`, and mu
 ```json
 {
   "clips": [
-    {"file": "input/01.mp4", "start": 0, "end": 5, "speed": 1.0},
-    {"file": "input/02.mp4", "start": 1, "end": 7}
+    {"file": "input/01.mp4", "start": 0, "end": 5, "speed": 1.0, "music": {"file": "input/X.mp3", "volume": 0.2}},
+    {"file": "input/02.mp4", "start": 1, "end": 7, "music": {"file": "input/Y.mp3", "volume": 0.2, "start": 1}}
   ],
   "format": "shorts",
   "fit": "crop",
   "fps": 30,
   "transition": {"type": "fade", "duration": 0.4},
   "fade": {"in": 0.3, "out": 0.6},
-  "music": {"file": "input/music.mp3", "volume": 0.2},
   "original_audio_volume": 1.0,
   "title": {"text": "我的大學生活", "start": 0, "end": 2, "size": 66},
   "subtitles": {"file": "input/captions.srt", "font": "Arial", "size": 48, "color": "#FFFFFF", "outline": 3},
@@ -53,7 +52,10 @@ All file paths are relative to the directory containing `edit-plan.json`, and mu
 - `fit`: `crop` (fills frame, may cut the sides) or `pad` (preserves whole frame). Prefer `pad` if a person's face or important content would be cropped.
 - `transition.type`: `cut`, `fade`, `wipeleft`, `wiperight`. All inter-clip transitions use the same type and duration. Default is `cut` with no decorative effect.
 - `fade.in`/`fade.out`: seconds applied to image and final audio.
-- `music`, `title`, `subtitles` are optional. `music.file` loops if shorter than the edit. Audio volume values are multipliers.
+- `clips[].music` is optional. It takes a local audio `file`, an optional `volume` multiplier (0–2, default 0.2), and an optional `start` offset in seconds (default 0, before the end of the audio). Music plays at normal speed for the clip's edited duration and loops from the beginning of the audio file as needed.
+- Clip music mixes with the clip's original sound, which is scaled by `original_audio_volume` (default 1, set to 0 to mute). Clip audio crossfades for the same duration as any non-cut video transition.
+- Use top-level `music: {"file": "input/music.mp3", "volume": 0.2}` for one continuous track across the whole edit. It loops as needed. If any clip has its own music, the renderer ignores top-level `music` and unscored clips play their original sound only.
+- `title` and `subtitles` are optional.
 - SRT timestamps must refer to the **edited output timeline**. Font names must exist on the user's system. `subtitles.font_file` may point to a local TTF/OTF; the configured font family must match the file's real family name.
 
 If a user asks only to combine clips, use hard cuts with default format; apply transitions/fades only when requested.

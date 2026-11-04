@@ -61,6 +61,29 @@ def number(value, name: str, low: float = 0, high: float = 100000) -> float:
     return value
 
 
+def clip_music_settings(music: dict, root: Path, clip_number: int) -> tuple[Path, float, float]:
+    label = f"Clip {clip_number} music"
+    if not isinstance(music, dict) or not isinstance(music.get("file"), str) or not music["file"]:
+        raise EditError(f"{label} must contain a file")
+    path = safe_path(root, music["file"])
+    volume = number(music.get("volume", 0.2), f"{label} volume", 0, 2)
+    start = number(music.get("start", 0), f"{label} start")
+    data = json.loads(run_capture([
+        "ffprobe", "-v", "error", "-select_streams", "a:0",
+        "-show_entries", "stream=duration:format=duration", "-of", "json", str(path),
+    ]))
+    streams = data.get("streams", [])
+    if not streams:
+        raise EditError(f"{label} has no audio stream: {path.name}")
+    if start:
+        duration = streams[0].get("duration")
+        if duration in (None, "N/A"):
+            duration = data.get("format", {}).get("duration")
+        if duration in (None, "N/A") or start >= float(duration):
+            raise EditError(f"{label} start must be before the end of the audio: {path.name}")
+    return path, volume, start
+
+
 def timestamp(seconds: float) -> str:
     hundredths = max(0, round(seconds * 100))
     hours, remainder = divmod(hundredths, 360000)
@@ -194,7 +217,7 @@ def plan_command(plan: dict, root: Path, workdir: Path) -> tuple[list[str], Path
         d = 0
 
     clips = []
-    cmd = ["ffmpeg", "-hide_banner", "-y"]
+    cmd = ["ffmpeg", "-hide_banner", "-n"]
     for index, item in enumerate(plan["clips"]):
         if not isinstance(item, dict) or "file" not in item:
             raise EditError(f"Clip {index + 1} needs a file")
@@ -208,10 +231,12 @@ def plan_command(plan: dict, root: Path, workdir: Path) -> tuple[list[str], Path
         duration = (end - start) / speed
         if d and duration <= d + 0.05:
             raise EditError("A clip is too short for the requested transition")
-        clips.append({"start": start, "end": end, "speed": speed, "duration": duration, "audio": info["audio"]})
+        clips.append({"start": start, "end": end, "speed": speed, "duration": duration,
+                      "audio": info["audio"], "music": item.get("music")})
         cmd += ["-i", str(path)]
 
-    music = plan.get("music")
+    use_clip_music = any(clip["music"] is not None for clip in clips)
+    music = None if use_clip_music else plan.get("music")
     if music:
         if not isinstance(music, dict) or "file" not in music:
             raise EditError("music must contain a file")
@@ -232,6 +257,8 @@ def plan_command(plan: dict, root: Path, workdir: Path) -> tuple[list[str], Path
     resize = (f"scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height}"
               if fit == "crop" else
               f"scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2")
+    music_index = len(clips)
+    audio_labels = []
     for i, clip in enumerate(clips):
         start, end, speed, duration = (clip[k] for k in ("start", "end", "speed", "duration"))
         filters.append(f"[{i}:v]trim=start={start:g}:end={end:g},setpts=(PTS-STARTPTS)/{speed:g},fps={fps},{resize},setsar=1,format=yuv420p,settb=AVTB[v{i}]")
@@ -240,17 +267,34 @@ def plan_command(plan: dict, root: Path, workdir: Path) -> tuple[list[str], Path
         else:
             filters.append(f"anullsrc=r=48000:cl=stereo,atrim=duration={duration:g},asetpts=PTS-STARTPTS[a{i}]")
 
-    v, a = "v0", "a0"
+        audio = f"a{i}"
+        if use_clip_music:
+            filters.append(f"[{audio}]volume={source_volume:g}[sourcea{i}]")
+            audio = f"sourcea{i}"
+            if clip["music"] is not None:
+                path, volume, music_start = clip_music_settings(clip["music"], root, i + 1)
+                cmd += ["-stream_loop", "-1", "-i", str(path)]
+                filters.append(
+                    f"[{music_index}:a:0]asetpts=PTS-STARTPTS,atrim=start={music_start:g},"
+                    f"asetpts=PTS-STARTPTS,atrim=duration={duration:g},aresample=48000,"
+                    f"aformat=channel_layouts=stereo,volume={volume:g}[clipbgm{i}]"
+                )
+                filters.append(f"[{audio}][clipbgm{i}]amix=inputs=2:duration=first:normalize=0[clipmix{i}]")
+                audio = f"clipmix{i}"
+                music_index += 1
+        audio_labels.append(audio)
+
+    v, a = "v0", audio_labels[0]
     running = clips[0]["duration"]
     for i in range(1, len(clips)):
         nv, na = f"joinedv{i}", f"joineda{i}"
         if effect == "cut":
             filters.append(f"[{v}][v{i}]concat=n=2:v=1:a=0[{nv}]")
-            filters.append(f"[{a}][a{i}]concat=n=2:v=0:a=1[{na}]")
+            filters.append(f"[{a}][{audio_labels[i]}]concat=n=2:v=0:a=1[{na}]")
         else:
             offset = running - d
             filters.append(f"[{v}][v{i}]xfade=transition={effect}:duration={d:g}:offset={offset:g}[{nv}]")
-            filters.append(f"[{a}][a{i}]acrossfade=d={d:g}[{na}]")
+            filters.append(f"[{a}][{audio_labels[i]}]acrossfade=d={d:g}[{na}]")
         running += clips[i]["duration"] - d
         v, a = nv, na
 
@@ -268,8 +312,12 @@ def plan_command(plan: dict, root: Path, workdir: Path) -> tuple[list[str], Path
         filters.append(f"[{v}]ass=overlays.ass:fontsdir=.[captionedv]")
         v = "captionedv"
 
-    filters.append(f"[{a}]volume={source_volume:g}[sourcea]")
-    a = "sourcea"
+    if use_clip_music:
+        filters.append(f"[{a}]alimiter=limit=0.95:level=0:latency=1[limiteda]")
+        a = "limiteda"
+    else:
+        filters.append(f"[{a}]volume={source_volume:g}[sourcea]")
+        a = "sourcea"
     if music:
         volume = number(music.get("volume", 0.2), "music volume", 0, 2)
         filters.append(f"[{len(clips)}:a]atrim=duration={total:g},asetpts=PTS-STARTPTS,aresample=48000,aformat=channel_layouts=stereo,volume={volume:g}[bgm]")

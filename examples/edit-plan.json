@@ -1,14 +1,13 @@
 {
   "clips": [
-    {"file": "input/01.mp4", "start": 0, "end": 5},
-    {"file": "input/02.mp4", "start": 1, "end": 7}
+    {"file": "input/01.mp4", "start": 0, "end": 5, "music": {"file": "input/X.mp3", "volume": 0.2}},
+    {"file": "input/02.mp4", "start": 1, "end": 7, "music": {"file": "input/Y.mp3", "volume": 0.2}}
   ],
   "format": "shorts",
   "fit": "crop",
   "fps": 30,
-  "transition": {"type": "fade", "duration": 0.4},
+  "transition": {"type": "fade", "duration": 0.5},
   "fade": {"in": 0.3, "out": 0.6},
-  "music": {"file": "input/music.mp3", "volume": 0.2},
   "original_audio_volume": 1.0,
   "title": {"text": "我的大學生活", "start": 0, "end": 2, "size": 66},
   "output": "output/edited.mp4"
