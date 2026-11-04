@@ -5,7 +5,7 @@ description: Edit local video/audio into MP4 with FFmpeg. Use for cuts, combinin
 
 # Local Video Editor
 
-Use the bundled deterministic scripts for video-editing requests. This is a portable Agent Skill for Codex, Claude Code, Gemini CLI and Antigravity. It does not require any AI API for ordinary editing.
+Use the bundled deterministic scripts for video-editing requests. This is a portable Agent Skill for Codex, Claude Code and Google Antigravity (other agents with local command execution may also follow it). It does not require any AI API for ordinary editing.
 
 ## First actions
 
