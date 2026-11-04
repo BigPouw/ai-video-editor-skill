@@ -1,0 +1,17 @@
+# User media, output and paid credentials
+input/
+output/
+*.mp4
+*.mov
+*.mkv
+*.avi
+*.mp3
+*.wav
+*.m4a
+*.srt
+.env
+.env.*
+*.key
+__pycache__/
+*.py[cod]
+.DS_Store
